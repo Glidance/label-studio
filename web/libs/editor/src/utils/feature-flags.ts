@@ -181,6 +181,11 @@ export const FF_VIDEO_FRAME_SEEK_PRECISION = "fflag_fix_front_optic_1608_improve
  */
 export const FF_TIMESERIES_SYNC = "fflag_feat_optic_2125_timeseries_sync";
 
+/**
+ * Automatically apply magnetic lasso to polygon regions after drawing is completed
+ */
+export const FF_AUTO_MAGNETIC_LASSO = "fflag_feat_front_magnetic_lasso_auto_apply_short";
+
 Object.assign(window, {
   APP_SETTINGS: {
     ...(window.APP_SETTINGS ?? {}),
@@ -195,6 +200,7 @@ function getFeatureFlags() {
   return {
     ...(window.APP_SETTINGS?.feature_flags ?? {}),
     // could be used to explicitly set flags for testing, i.e. [FF_DEV_3793]: true
+    [FF_AUTO_MAGNETIC_LASSO]: true, // Enable auto magnetic lasso by default for testing
   };
 }
 

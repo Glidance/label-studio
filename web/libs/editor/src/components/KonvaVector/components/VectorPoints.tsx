@@ -1,4 +1,5 @@
 import type React from "react";
+import { useEffect } from "react";
 import { Circle } from "react-konva";
 import type Konva from "konva";
 import type { BezierPoint } from "../types";
@@ -24,6 +25,8 @@ interface VectorPointsProps {
   pointStrokeWidth?: number;
   activePointId?: string | null;
   maxPoints?: number;
+  nearestPointIndex?: number | null;
+  nearestPointDistance?: number;
   onPointClick?: (e: Konva.KonvaEventObject<MouseEvent>, pointIndex: number) => void;
 }
 
@@ -44,6 +47,8 @@ export const VectorPoints: React.FC<VectorPointsProps> = ({
   pointStrokeWidth = 2,
   activePointId = null,
   maxPoints,
+  nearestPointIndex = null,
+  nearestPointDistance = 0,
   onPointClick,
 }) => {
   // CRITICAL: For single-point regions, we need to allow clicks even when not selected
@@ -51,6 +56,15 @@ export const VectorPoints: React.FC<VectorPointsProps> = ({
   // BUT: Never allow clicks when disabled or in transform mode
   const isSinglePointRegion = initialPoints.length === 1;
   const shouldListenToClicks = !disabled && !transformMode && (selected || isSinglePointRegion);
+
+  // Debug logging
+  console.log('VectorPoints rendered:', {
+    pointCount: initialPoints.length,
+    nearestPointIndex,
+    nearestPointDistance: nearestPointDistance?.toFixed ? nearestPointDistance.toFixed(1) : nearestPointDistance,
+    selected,
+    disabled
+  });
 
   return (
     <>
@@ -77,8 +91,20 @@ export const VectorPoints: React.FC<VectorPointsProps> = ({
             !isMultiSelection &&
             activePointId !== null &&
             point.id === activePointId);
-        // Make selected points larger
-        const radiusMultiplier = isSelected ? 1.3 : 1;
+        
+        // Calculate proximity-based radius multiplier
+        // When mouse is near the point, make it bigger and easier to grab
+        const PROXIMITY_THRESHOLD = 100; // pixels - distance at which point starts growing (increased for testing)
+        const MAX_GROWTH = 2.5; // maximum radius multiplier when at very close distance (increased for testing)
+        let proximityMultiplier = 1;
+        if (nearestPointIndex === index && nearestPointDistance !== undefined && nearestPointDistance < PROXIMITY_THRESHOLD) {
+          // Calculate growth based on inverse distance: closer distance = bigger multiplier
+          // Formula: 1 + (1 - (distance / threshold)) * (MAX_GROWTH - 1)
+          proximityMultiplier = 1 + (1 - nearestPointDistance / PROXIMITY_THRESHOLD) * (MAX_GROWTH - 1);
+        }
+        
+        // Make selected points larger, also apply proximity multiplier
+        const radiusMultiplier = isSelected ? Math.max(1.3, proximityMultiplier) : proximityMultiplier;
         const scaledRadius = (baseRadius * radiusMultiplier) / scale;
 
         return (
