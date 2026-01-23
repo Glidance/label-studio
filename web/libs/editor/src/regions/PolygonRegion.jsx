@@ -22,7 +22,6 @@ import { ImageViewContext } from "../components/ImageView/ImageViewContext";
 import { FF_DEV_3793, isFF } from "../utils/feature-flags";
 import { fixMobxObserve } from "../utils/utilities";
 import { RELATIVE_STAGE_HEIGHT, RELATIVE_STAGE_WIDTH } from "../components/ImageView/Image";
-import { createEdgeMapFromImage, addSnappedPointsToPolygon } from "../utils/edgeDetection";
 
 const PolygonRegionAbsoluteCoordsDEV3793 = types
   .model({
@@ -456,7 +455,12 @@ const Model = types
         }
       },
 
+      // _applyMagneticLassoWithImage method disabled - requires edgeDetection module
+      // TODO: Implement edgeDetection module or remove magnetic lasso feature
       _applyMagneticLassoWithImage(imageElement, options = {}) {
+        console.warn("Magnetic lasso feature is currently disabled - edgeDetection module not available");
+        return;
+        /*
         const {
           segmentLength = 10,
           searchRadius = 20,
@@ -542,6 +546,7 @@ const Model = types
           console.error("Stack:", error.stack);
           window.lastMagneticLassoError = error.message;
         }
+        */
       },
     };
   });
