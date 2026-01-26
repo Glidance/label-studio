@@ -1,0 +1,20 @@
+name: "CI/CD Pipeline (Glidance)"
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ecr:
+    name: "Build & Push to ECR"
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/docker-build-ecr.yml
+    with:
+      sha: ${{ github.sha }}
+      branch_name: ${{ github.ref_name }}
