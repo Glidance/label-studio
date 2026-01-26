@@ -2,18 +2,37 @@ name: "CI/CD Pipeline (Glidance)"
 
 on:
   push:
-    branches: [develop, main]
+    branches: [glidance]
   pull_request:
-    branches: [develop, main]
+    branches: [glidance]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  ruff:
+    name: "Lint"
+    uses: ./.github/workflows/ruff.yml
+    with:
+      head_sha: ${{ github.event.pull_request.head.sha || github.sha }}
+
+  blue:
+    name: "Lint"
+    uses: ./.github/workflows/blue.yml
+    with:
+      head_sha: ${{ github.event.pull_request.head.sha || github.sha }}
+
+  bandit:
+    name: "Lint"
+    uses: ./.github/workflows/bandit.yml
+    with:
+      head_sha: ${{ github.event.pull_request.head.sha || github.sha }}
+
   build-ecr:
     name: "Build & Push to ECR"
     if: github.event_name == 'push'
+    needs: [ruff, blue, bandit]
     uses: ./.github/workflows/docker-build-ecr.yml
     with:
       sha: ${{ github.sha }}
