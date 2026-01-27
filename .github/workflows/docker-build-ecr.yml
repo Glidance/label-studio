@@ -77,7 +77,8 @@ jobs:
 
       - name: Build image
         run: |
-          docker build \
+          DOCKER_BUILDKIT=1 docker build \
+            --progress=plain \
             --build-arg VERSION_OVERRIDE=${{ needs.calculate_version.outputs.build_version }} \
             -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.calculate_version.outputs.image_version }} \
             -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.calculate_version.outputs.build_version }} \
