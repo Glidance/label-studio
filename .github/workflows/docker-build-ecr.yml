@@ -48,12 +48,18 @@ jobs:
         run: |
           sha="${{ inputs.sha }}"
           branch="${{ inputs.branch_name }}"
-          pretty_branch="$(echo -n "${branch#refs/heads/}" | sed -E 's#[/_\.-]+#-#g' | tr '[:upper:]' '[:lower:]' | cut -c1-25)"
           short_sha="$(echo $sha | cut -c1-7)"
           timestamp="$(date +'%Y%m%d.%H%M%S')"
 
-          echo "image_version=${pretty_branch}" >> $GITHUB_OUTPUT
-          echo "build_version=${timestamp}-${pretty_branch}-${short_sha}" >> $GITHUB_OUTPUT
+          # Map branch names to image tags
+          if [[ "$branch" == "feat/polygon-preview-line" ]]; then
+            image_version="glidance_v1"
+          else
+            image_version="$(echo -n "${branch#refs/heads/}" | sed -E 's#[/_\.-]+#-#g' | tr '[:upper:]' '[:lower:]' | cut -c1-25)"
+          fi
+
+          echo "image_version=${image_version}" >> $GITHUB_OUTPUT
+          echo "build_version=${timestamp}-${image_version}-${short_sha}" >> $GITHUB_OUTPUT
 
   build_and_push:
     name: "Build & Push"

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Circle, Rect } from "react-konva";
 import { observer } from "mobx-react";
 import { getParent, hasParent, types } from "mobx-state-tree";
@@ -147,8 +147,8 @@ const PolygonPoint = types.compose("PolygonPoint", AnnotationMixin, PolygonPoint
 
 const PolygonPointView = observer(({ item, name }) => {
   if (!item.parent) return;
-
   const [draggable, setDraggable] = useState(true);
+  const nodeRef = useRef(null);
   const regionStyles = useRegionStyles(item.parent);
   const sizes = {
     small: 4,
@@ -163,6 +163,53 @@ const PolygonPointView = observer(({ item, name }) => {
   };
 
   const w = sizes[item.size];
+
+  // Proximity-based scaling: adjust node scale when cursor is near the point
+  const PROXIMITY_THRESHOLD_PX = 60; // screen pixels
+  const MAX_SCALE_MULTIPLIER = 2.0;
+
+  useEffect(() => {
+    try {
+      const stage = item.stage?.stageRef;
+      if (!stage || !nodeRef?.current) return;
+
+      const baseScale = 1 / (item.stage.zoomScale || 1);
+
+      const handler = () => {
+        const pos = stage.getPointerPosition();
+        if (!pos || !nodeRef.current) return;
+
+        // Compute distance in stage (screen) coordinates between cursor and point center
+        const dx = pos.x - item.canvasX;
+        const dy = pos.y - item.canvasY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= PROXIMITY_THRESHOLD_PX) {
+          const t = 1 - dist / PROXIMITY_THRESHOLD_PX; // 0..1
+          const multiplier = 1 + t * (MAX_SCALE_MULTIPLIER - 1);
+          nodeRef.current.scale({ x: baseScale * multiplier, y: baseScale * multiplier });
+          // Ensure stage redraw
+          stage.batchDraw && stage.batchDraw();
+        } else {
+          // Revert to base scale
+          nodeRef.current.scale({ x: baseScale, y: baseScale });
+          stage.batchDraw && stage.batchDraw();
+        }
+      };
+
+      stage.on("mousemove", handler);
+
+      return () => {
+        stage.off("mousemove", handler);
+        // Reset scale when unmounting
+        try {
+          if (nodeRef.current) nodeRef.current.scale({ x: baseScale, y: baseScale });
+        } catch (e) {}
+      };
+    } catch (e) {
+      console.error("Proximity handler error:", e);
+    }
+  }, [item, nodeRef]);
 
   const startPointAttr =
     item.index === 0
@@ -241,6 +288,7 @@ const PolygonPointView = observer(({ item, name }) => {
         x={item.canvasX}
         y={item.canvasY}
         radius={w}
+        ref={nodeRef}
         fill={fill}
         stroke="black"
         strokeWidth={stroke[item.size]}
@@ -280,6 +328,7 @@ const PolygonPointView = observer(({ item, name }) => {
       y={item.y - w / 2}
       width={w}
       height={w}
+      ref={nodeRef}
       fill={fill}
       stroke="black"
       strokeWidth={stroke[item.size]}

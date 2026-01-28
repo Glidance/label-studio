@@ -120,7 +120,7 @@ const _Tool = types
         }
       },
 
-      _finishDrawing() {
+            _finishDrawing() {
         const { currentArea, control } = self;
 
         self.currentArea.notifyDrawingFinished();

@@ -39,6 +39,8 @@ const Model = types
     preferTransformer: false,
     supportsRotate: false,
     supportsScale: true,
+    _magneticLassoApplied: false,
+    previewLineEndPoint: null,
   }))
   .views((self) => ({
     get store() {
@@ -83,6 +85,19 @@ const Model = types
           }));
         }
         self.checkSizes();
+        
+        // Apply magnetic lasso to loaded polygons (only if closed and has few points)
+        // This means the polygon was manually created and not yet refined
+        if (self.closed && self.points.length >= 3 && self.points.length < 50 && !self._magneticLassoApplied) {
+          setTimeout(() => {
+            if (self.parent?.currentImageEntity?.htmlImageRef) {
+              self.applyMagneticLasso({
+                segmentLength: 10,
+                searchRadius: 20,
+              });
+            }
+          }, 100);
+        }
       },
 
       /**
@@ -211,6 +226,18 @@ const Model = types
       closePoly() {
         if (self.closed || self.points.length < 3) return;
         self.closed = true;
+        self.previewLineEndPoint = null; // Clear preview line
+        
+        console.log("=== Polygon closed ===");
+        console.log("Points count:", self.points.length);
+      },
+
+      setPreviewLineEndPoint(x, y) {
+        self.previewLineEndPoint = { x, y };
+      },
+
+      clearPreviewLineEndPoint() {
+        self.previewLineEndPoint = null;
       },
 
       canClose(x, y) {
@@ -277,6 +304,212 @@ const Model = types
         };
 
         return self.parent.createSerializedResult(self, value);
+      },
+
+      /**
+       * Apply edge detection and snap polygon points to detected edges
+       * Adds intermediate points along edges that follow detected image edges
+       * @param {object} options - Edge detection and snapping options
+       * @param {number} options.segmentLength - Desired length between points (in pixels), default 10
+       * @param {number} options.searchRadius - Radius to search for edges (in pixels), default 20
+       * @param {number} options.gaussianKernelSize - Gaussian blur kernel size, default 5
+       * @param {number} options.gaussianSigma - Gaussian blur sigma, default 1.4
+       * @param {number} options.lowThreshold - Canny low threshold, default 0.05
+       * @param {number} options.highThreshold - Canny high threshold, default 0.15
+       */
+      applyMagneticLasso(options = {}) {
+        console.log("=== applyMagneticLasso called ===");
+        
+        if (!self.parent) {
+          console.error("ERROR: self.parent is null/undefined");
+          return;
+        }
+
+        const {
+          segmentLength = 10,
+          searchRadius = 20,
+          gaussianKernelSize = 5,
+          gaussianSigma = 1.4,
+          lowThreshold = 0.05,
+          highThreshold = 0.15,
+        } = options;
+
+        if (self.points.length < 3) {
+          console.warn("Not enough points to apply magnetic lasso");
+          return;
+        }
+
+        try {
+          // Try to get the image element
+          let imageElement = null;
+          
+          // Method 1: Try htmlImageRef
+          if (self.parent.currentImageEntity?.htmlImageRef) {
+            imageElement = self.parent.currentImageEntity.htmlImageRef;
+            console.log("Got image from htmlImageRef");
+          }
+          
+          // Method 2: Try to find img element in DOM
+          if (!imageElement) {
+            console.log("htmlImageRef not available, searching DOM for image...");
+            const imgElements = document.querySelectorAll('img[alt*="Image"], img[data-qa="image"], img[src*="data:"]');
+            if (imgElements.length > 0) {
+              imageElement = imgElements[0];
+              console.log("Found image in DOM");
+            }
+          }
+          
+          // Method 3: Create a canvas from the Konva stage and convert to image
+          if (!imageElement) {
+            console.log("Attempting to get canvas from Konva stage...");
+            const stage = self.parent?.stageRef;
+            if (stage) {
+              try {
+                const canvas = stage.toCanvas();
+                if (canvas) {
+                  // Convert canvas to image
+                  const img = new Image();
+                  img.src = canvas.toDataURL();
+                  // Wait for image to load
+                  img.onload = () => {
+                    console.log("Converted Konva canvas to image");
+                    self._applyMagneticLassoWithImage(img, options);
+                  };
+                  img.onerror = () => {
+                    console.error("Failed to convert canvas to image");
+                  };
+                  return; // Return early, will call applyMagneticLasso with image onload
+                }
+              } catch (e) {
+                console.log("Failed to get canvas from stage:", e.message);
+              }
+            }
+          }
+          
+          if (!imageElement) {
+            console.error("ERROR: Could not find image element by any method");
+            return;
+          }
+
+          console.log("Image element found:", {
+            src: imageElement.src?.substring(0, 50),
+            width: imageElement.width,
+            height: imageElement.height,
+            complete: imageElement.complete,
+            naturalWidth: imageElement.naturalWidth,
+            naturalHeight: imageElement.naturalHeight,
+          });
+
+          // Check if image is loaded
+          if (!imageElement.complete && imageElement.naturalHeight === 0) {
+            console.warn("Image not fully loaded yet, waiting...");
+            // Wait for image to load
+            imageElement.onload = () => {
+              self._applyMagneticLassoWithImage(imageElement, options);
+            };
+            return;
+          }
+
+          self._applyMagneticLassoWithImage(imageElement, options);
+        } catch (error) {
+          console.error("ERROR in applyMagneticLasso:", error);
+          console.error("Stack:", error.stack);
+          window.lastMagneticLassoError = error.message;
+        }
+      },
+
+      // _applyMagneticLassoWithImage method disabled - requires edgeDetection module
+      // TODO: Implement edgeDetection module or remove magnetic lasso feature
+      _applyMagneticLassoWithImage(imageElement, options = {}) {
+        console.warn("Magnetic lasso feature is currently disabled - edgeDetection module not available");
+        return;
+        /*
+        const {
+          segmentLength = 10,
+          searchRadius = 20,
+          gaussianKernelSize = 5,
+          gaussianSigma = 1.4,
+          lowThreshold = 0.05,
+          highThreshold = 0.15,
+        } = options;
+
+        try {
+          console.log("Creating edge map...");
+          // Create edge map from the image
+          const { edgeMap, width } = createEdgeMapFromImage(imageElement, {
+            gaussianKernelSize,
+            gaussianSigma,
+            lowThreshold,
+            highThreshold,
+          });
+          
+          console.log("Edge map created successfully:", {
+            width,
+            edgeMapType: edgeMap?.constructor?.name,
+            edgeMapLength: edgeMap?.length,
+          });
+
+          // Convert current points to image coordinates
+          const imagePoints = self.points.map((p, idx) => {
+            const x = self.parent.internalToImageX(p.x);
+            const y = self.parent.internalToImageY(p.y);
+            console.log(`Point ${idx}: internal(${p.x.toFixed(1)}, ${p.y.toFixed(1)}) -> image(${x.toFixed(1)}, ${y.toFixed(1)})`);
+            return { x, y };
+          });
+          
+          console.log("Converted to image coordinates:", imagePoints.length, "points");
+
+          // Apply edge snapping and interpolation
+          console.log("Calling addSnappedPointsToPolygon...");
+          
+          const snappedPoints = addSnappedPointsToPolygon(
+            imagePoints,
+            edgeMap,
+            width,
+            segmentLength,
+            searchRadius
+          );
+          
+          console.log("Snapping complete:", {
+            originalCount: imagePoints.length,
+            snappedCount: snappedPoints.length,
+            newPointsAdded: snappedPoints.length - imagePoints.length,
+          });
+
+          if (snappedPoints.length === imagePoints.length) {
+            console.warn("WARNING: No new points added by magnetic lasso!");
+          }
+
+          // Convert back to internal coordinates and update points
+          const newPoints = snappedPoints.map((p, idx) => {
+            const internalX = self.parent.imageToInternalX(p.x);
+            const internalY = self.parent.imageToInternalY(p.y);
+            return {
+              id: guidGenerator(),
+              x: internalX,
+              y: internalY,
+              size: self.pointSize,
+              style: self.pointStyle,
+              index: idx,
+            };
+          });
+
+          console.log("Converted back to internal coordinates:", newPoints.length, "points");
+          
+          // Update the points
+          self.points = newPoints;
+          
+          // Mark that magnetic lasso has been applied
+          self._magneticLassoApplied = true;
+
+          console.log(`✓ Magnetic lasso applied successfully! Now ${self.points.length} points`);
+          window.lastMagneticLassoResult = `Success: ${imagePoints.length} -> ${snappedPoints.length} points`;
+        } catch (error) {
+          console.error("ERROR in _applyMagneticLassoWithImage:", error);
+          console.error("Stack:", error.stack);
+          window.lastMagneticLassoError = error.message;
+        }
+        */
       },
     };
   });
@@ -460,6 +693,40 @@ const Edge = observer(({ name, item, idx, p1, p2, closed, regionStyles }) => {
   );
 });
 
+/**
+ * Preview line from last point to cursor position
+ */
+const PreviewLine = observer(({ item, regionStyles }) => {
+  const { points, closed, previewLineEndPoint } = item;
+
+  // Only show preview line when polygon is NOT closed and we have at least one point and a cursor position
+  if (closed || points.length === 0 || !previewLineEndPoint) {
+    return null;
+  }
+
+  const lastPoint = points[points.length - 1];
+  const flattenedPoints = [lastPoint.canvasX, lastPoint.canvasY, previewLineEndPoint.x, previewLineEndPoint.y];
+
+  return (
+    <Group name="previewLineGroup">
+      <Line
+        name="previewLine"
+        lineJoin="round"
+        lineCap="round"
+        stroke={regionStyles.strokeColor}
+        strokeWidth={regionStyles.strokeWidth}
+        strokeScaleEnabled={false}
+        perfectDrawEnabled={false}
+        shadowForStrokeEnabled={false}
+        points={flattenedPoints}
+        dash={[5, 5]} // Dashed line to indicate preview
+        opacity={0.7}
+        listening={false}
+      />
+    </Group>
+  );
+});
+
 const Edges = memo(
   observer(({ item, regionStyles }) => {
     const { points, closed } = item;
@@ -627,6 +894,7 @@ const HtxPolygonView = ({ item, setShapeRef }) => {
         />
       ) : null}
       {item.points && !item.isReadOnly() ? <Edges item={item} regionStyles={regionStyles} /> : null}
+      {item.points && !item.isReadOnly() && !item.closed ? <PreviewLine item={item} regionStyles={regionStyles} /> : null}
       {item.points && !item.isReadOnly() ? renderCircles(item.points) : null}
     </Group>
   );

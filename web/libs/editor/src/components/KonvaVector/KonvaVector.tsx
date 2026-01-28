@@ -474,6 +474,8 @@ export const KonvaVector = forwardRef<KonvaVectorRef, KonvaVectorProps>((props, 
   const [visibleControlPoints, setVisibleControlPoints] = useState<Set<number>>(new Set());
   const [activePointId, setActivePointId] = useState<string | null>(null);
   const [isTransforming, setIsTransforming] = useState(false);
+  const [nearestPointIndex, setNearestPointIndex] = useState<number | null>(null);
+  const [nearestPointDistance, setNearestPointDistance] = useState<number>(0);
 
   // Flag to track if point selection was handled in VectorPoints onClick
   const pointSelectionHandled = useRef(false);
@@ -1037,6 +1039,66 @@ export const KonvaVector = forwardRef<KonvaVectorRef, KonvaVectorProps>((props, 
     selectedPoints.size,
     effectiveSelectedPoints.size,
   ]); // Re-run when points change, transform changes, or selection changes
+
+  // Calculate nearest point to cursor for proximity-based radius scaling
+  // Use animation frame to continuously update based on cursor position
+  useEffect(() => {
+    if (!selected || disabled || initialPoints.length === 0) {
+      setNearestPointIndex(null);
+      setNearestPointDistance(0);
+      return;
+    }
+
+    let rafId: number | null = null;
+    let frameCount = 0;
+
+    const updateNearestPoint = () => {
+      frameCount++;
+      if (cursorPositionRef.current) {
+        let minDistance = Infinity;
+        let nearestIndex = null;
+
+        // Scale factor to convert from image coordinates to screen coordinates
+        const scale = transform.zoom * fitScale;
+
+        for (let i = 0; i < initialPoints.length; i++) {
+          const point = initialPoints[i];
+          // Calculate distance in image coordinates
+          const imageDistance = Math.sqrt(
+            (cursorPositionRef.current!.x - point.x) ** 2 +
+            (cursorPositionRef.current!.y - point.y) ** 2
+          );
+          // Convert to screen coordinates for proximity calculation
+          const screenDistance = imageDistance * scale;
+
+          if (screenDistance < minDistance) {
+            minDistance = screenDistance;
+            nearestIndex = i;
+          }
+        }
+
+        setNearestPointIndex(nearestIndex);
+        setNearestPointDistance(minDistance);
+        
+        // Debug log every 60 frames (~1 second at 60fps)
+        if (frameCount % 60 === 1) {
+          console.log('Nearest point:', { nearestIndex, distance: minDistance.toFixed(1), scale: scale.toFixed(2) });
+        }
+      }
+
+      // Schedule next frame
+      rafId = requestAnimationFrame(updateNearestPoint);
+    };
+
+    // Start the animation frame loop
+    rafId = requestAnimationFrame(updateNearestPoint);
+
+    return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, [initialPoints, selected, disabled, transform.zoom, fitScale]);
 
   // Stabilize functions for tracker registration
   const getPoints = useCallback(() => initialPoints, [initialPoints]);
@@ -3785,6 +3847,8 @@ export const KonvaVector = forwardRef<KonvaVectorRef, KonvaVectorProps>((props, 
             pointStrokeWidth={pointStrokeWidth}
             activePointId={activePointId}
             maxPoints={maxPoints}
+            nearestPointIndex={nearestPointIndex}
+            nearestPointDistance={nearestPointDistance}
             onPointClick={(e, pointIndex) => {
               // Prevent all clicks when disabled or in transform mode
               if (disabled || transformMode) {
@@ -4207,6 +4271,8 @@ export const KonvaVector = forwardRef<KonvaVectorRef, KonvaVectorProps>((props, 
             pointStrokeWidth={pointStrokeWidth}
             activePointId={activePointId}
             maxPoints={maxPoints}
+            nearestPointIndex={nearestPointIndex}
+            nearestPointDistance={nearestPointDistance}
             onPointClick={(e, pointIndex) => {
               // Handle Alt+click point deletion FIRST (before other checks)
               if (e.evt.altKey && !e.evt.shiftKey && selected) {

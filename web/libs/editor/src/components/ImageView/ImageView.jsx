@@ -805,9 +805,28 @@ export default observer(
         item.event("mousemove", e, e.evt.offsetX, e.evt.offsetY);
       }
 
+      // Update preview line for polygon tool - ALWAYS, not just when !mouseDown
+      const tool = item.getToolsManager().findSelectedTool();
+      if (tool?.toolName === "PolygonTool" || tool?.fullName === "PolygonTool") {
+        const activePolygon = tool.getActivePolygon;
+        if (activePolygon && activePolygon.points && activePolygon.points.length > 0) {
+          // Use Konva stage pointer position for accurate coordinates
+          const stage = item.stageRef;
+          if (stage) {
+            const pointerPos = stage.getPointerPosition();
+            if (pointerPos) {
+              const { x: deltaX, y: deltaY } = stage.position();
+              const { x: scaleX, y: scaleY } = stage.scale();
+              const normalizedX = (pointerPos.x - deltaX) / scaleX;
+              const normalizedY = (pointerPos.y - deltaY) / scaleY;
+              activePolygon.setPreviewLineEndPoint(normalizedX, normalizedY);
+            }
+          }
+        }
+      }
+
       if (!e.evt.ctrlKey && !e.evt.shiftKey && !this.mouseDown) {
-        const allowedTypes = /bitmask|vector/;
-        const tool = item.getToolsManager().findSelectedTool();
+        const allowedTypes = /bitmask|vector|polygon/;
 
         if (item.regs.some((r) => r.isDrawing)) return;
         if (!item.regs.some((r) => r.type.match(allowedTypes) !== null)) return;
@@ -1152,6 +1171,16 @@ export default observer(
                   if (this.crosshairRef.current) {
                     this.crosshairRef.current.updateVisibility(false);
                   }
+                  
+                  // Clear preview line for polygon tool
+                  const tool = item.getToolsManager().findSelectedTool();
+                  if (tool?.toolName === "PolygonTool" || tool?.fullName === "PolygonTool") {
+                    const activePolygon = tool.getActivePolygon;
+                    if (activePolygon) {
+                      activePolygon.clearPreviewLineEndPoint();
+                    }
+                  }
+                  
                   const { width: stageWidth, height: stageHeight } = item.canvasSize;
                   const { offsetX: mouseposX, offsetY: mouseposY } = e.evt;
                   const newEvent = { ...e };
@@ -1326,13 +1355,26 @@ const CursorLayer = observer(({ item, tool }) => {
       const { x, y } = stage.getPointerPosition();
       const { x: deltaX, y: deltaY } = stage.position();
       const { x: scaleX, y: scaleY } = stage.scale();
-      setCursorPosition([(x - deltaX) / scaleX, (y - deltaY) / scaleY]);
+      const normalizedX = (x - deltaX) / scaleX;
+      const normalizedY = (y - deltaY) / scaleY;
+      setCursorPosition([normalizedX, normalizedY]);
+      
+      // Update preview line for active polygon tool
+      const activePolygon = tool?.getActivePolygon;
+      if (activePolygon && activePolygon.points && activePolygon.points.length > 0) {
+        activePolygon.setPreviewLineEndPoint(normalizedX, normalizedY);
+      }
     };
     const onMouseEnter = () => {
       setVisible(true);
     };
     const onMouseLeave = () => {
       setVisible(false);
+      // Clear preview line when mouse leaves
+      const activePolygon = tool?.getActivePolygon;
+      if (activePolygon) {
+        activePolygon.clearPreviewLineEndPoint();
+      }
     };
 
     stage.on("mousemove", onMouseMove);
@@ -1344,7 +1386,7 @@ const CursorLayer = observer(({ item, tool }) => {
       stage.off("mouseenter", onMouseEnter);
       stage.off("mouseleave", onMouseLeave);
     };
-  }, [item.stageRef]);
+  }, [item.stageRef, tool]);
 
   const size = useMemo(() => {
     return tool.strokeWidth * item.stageZoom;
@@ -1448,7 +1490,7 @@ const StageContent = observer(({ item, store, state, crosshairRef }) => {
         />
       )}
 
-      {tool && tool.toolName.match(/bitmask/i) && <CursorLayer item={item} tool={tool} />}
+      {tool && (tool.toolName.match(/bitmask/i) || tool.toolName === "Polygon") && <CursorLayer item={item} tool={tool} />}
     </>
   );
 });

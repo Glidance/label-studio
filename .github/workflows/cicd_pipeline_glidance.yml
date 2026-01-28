@@ -2,9 +2,9 @@ name: "CI/CD Pipeline (Glidance)"
 
 on:
   push:
-    branches: [glidance]
+    branches: [glidance, feat/polygon-preview-line]
   pull_request:
-    branches: [glidance]
+    branches: [glidance, feat/polygon-preview-line]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
