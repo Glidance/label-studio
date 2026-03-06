@@ -221,7 +221,27 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
 
         buttons.push(<ControlButton key={button.name} button={button} disabled={disabled} onClick={onReject} />);
       });
-      buttons.push(<AcceptButton key="review-accept" disabled={disabled} history={history} store={store} />);
+      buttons.push(
+        <Button
+          key="review-accept"
+          variant="positive"
+          look="filled"
+          tooltip="Accept annotation: [ Ctrl+Enter ]"
+          aria-label="accept-annotation"
+          className="w-[150px]"
+          disabled={disabled}
+          onClick={async () => {
+            const selected = store.annotationStore.selected;
+
+            selected?.submissionInProgress();
+            await store.commentStore.commentFormSubmit();
+            store.acceptAnnotation();
+          }}
+          data-testid="bottombar-accept-button"
+        >
+          {history?.canUndo || versions?.draft ? "Fix + Accept" : "Accept"}
+        </Button>,
+      );
     } else if (annotation.skipped) {
       buttons.push(
         <div className={cn("controls").elem("skipped-info").toClassName()} key="skipped">
