@@ -157,17 +157,17 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       const lastAction = (annotation as any).last_action;
       const reviewerEmail = reviewStatus?.reviewer_email || "";
 
-      let badgeLabel = "Unreviewed";
-      let badgeColor = "#9e9e9e"; // neutral gray
-      let badgeTooltip = "This annotation has not been reviewed";
+      let badgeIcon = "○";
+      let badgeColor = "#9e9e9e";
+      let badgeTooltip = "Unreviewed";
 
       if (lastAction === "accepted") {
-        badgeLabel = "Approved";
-        badgeColor = "#4caf50"; // green
+        badgeIcon = "✓";
+        badgeColor = "#4caf50";
         badgeTooltip = reviewerEmail ? `Approved by ${reviewerEmail}` : "Approved";
       } else if (lastAction === "rejected") {
-        badgeLabel = "Rejected";
-        badgeColor = "#f44336"; // red
+        badgeIcon = "✗";
+        badgeColor = "#f44336";
         badgeTooltip = reviewerEmail ? `Rejected by ${reviewerEmail}` : "Rejected";
       }
 
@@ -177,18 +177,20 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
             style={{
               display: "inline-flex",
               alignItems: "center",
-              padding: "4px 12px",
+              justifyContent: "center",
+              width: "28px",
+              height: "28px",
               borderRadius: "4px",
-              fontSize: "13px",
-              fontWeight: 600,
+              fontSize: "18px",
+              fontWeight: 700,
               color: badgeColor,
-              border: `1px solid ${badgeColor}`,
-              marginRight: "8px",
+              border: `2px solid ${badgeColor}`,
               userSelect: "none",
+              lineHeight: 1,
             }}
             data-testid="review-status-badge"
           >
-            {badgeLabel}
+            {badgeIcon}
           </span>
         </ButtonTooltip>,
       );
@@ -219,16 +221,41 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
           }
         };
 
-        buttons.push(<ControlButton key={button.name} button={button} disabled={disabled} onClick={onReject} />);
+        buttons.push(
+          <button
+            key={button.name}
+            title="Reject annotation: [ Ctrl+Space ]"
+            aria-label="reject-annotation"
+            disabled={disabled}
+            onClick={onReject}
+            data-testid="bottombar-reject-button"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "40px",
+              height: "40px",
+              padding: "0",
+              border: "2px solid #f44336",
+              borderRadius: "4px",
+              backgroundColor: "transparent",
+              color: "#f44336",
+              fontSize: "22px",
+              fontWeight: 700,
+              cursor: disabled ? "not-allowed" : "pointer",
+              opacity: disabled ? 0.4 : 1,
+              lineHeight: 1,
+            }}
+          >
+            ✗
+          </button>,
+        );
       });
       buttons.push(
-        <Button
+        <button
           key="review-accept"
-          variant="positive"
-          look="filled"
-          tooltip="Accept annotation: [ Ctrl+Enter ]"
+          title="Accept annotation: [ Ctrl+Enter ]"
           aria-label="accept-annotation"
-          className="w-[150px]"
           disabled={disabled}
           onClick={async () => {
             const selected = store.annotationStore.selected;
@@ -238,9 +265,26 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
             store.acceptAnnotation();
           }}
           data-testid="bottombar-accept-button"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "40px",
+            height: "40px",
+            padding: "0",
+            border: "2px solid #4caf50",
+            borderRadius: "4px",
+            backgroundColor: "#4caf50",
+            color: "#fff",
+            fontSize: "22px",
+            fontWeight: 700,
+            cursor: disabled ? "not-allowed" : "pointer",
+            opacity: disabled ? 0.4 : 1,
+            lineHeight: 1,
+          }}
         >
-          {history?.canUndo || versions?.draft ? "Fix + Accept" : "Accept"}
-        </Button>,
+          ✓
+        </button>,
       );
     } else if (annotation.skipped) {
       buttons.push(
