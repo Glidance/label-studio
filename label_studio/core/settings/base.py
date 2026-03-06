@@ -893,11 +893,7 @@ OPENAI_API_VERSION = get_env('OPENAI_API_VERSION', '2024-06-01')
 # Annotation Review / Approval settings
 REVIEW_ENABLED = get_bool_env('REVIEW_ENABLED', False)
 _review_approvers_raw = get_env('REVIEW_APPROVERS', '')
-REVIEW_APPROVERS = {
-    email.strip().lower()
-    for email in (_review_approvers_raw or '').split(',')
-    if email.strip()
-}
+REVIEW_APPROVERS = {email.strip().lower() for email in (_review_approvers_raw or '').split(',') if email.strip()}
 APPEND_SLASH = False
 
 if CI:

@@ -7,7 +7,6 @@ from rest_framework.test import APITestCase
 from tasks.tests.factories import AnnotationFactory, TaskFactory
 from users.tests.factories import UserFactory
 
-
 REVIEWER_EMAIL = 'reviewer@example.com'
 LABELER_EMAIL = 'labeler@example.com'
 
@@ -149,9 +148,7 @@ class TamperingProtectionTests(APITestCase):
 
     def test_reviewer_normal_update_works(self):
         self.client.force_authenticate(user=self.reviewer)
-        new_result = [
-            {'value': {'choices': ['neg']}, 'from_name': 'sent', 'to_name': 'text', 'type': 'choices'}
-        ]
+        new_result = [{'value': {'choices': ['neg']}, 'from_name': 'sent', 'to_name': 'text', 'type': 'choices'}]
         resp = self.client.patch(
             f'/api/annotations/{self.annotation.id}/',
             data={'result': new_result},
@@ -188,9 +185,7 @@ class ResetOnEditTests(APITestCase):
 
         # Labeler edits the annotation result
         self.client.force_authenticate(user=self.labeler)
-        new_result = [
-            {'value': {'choices': ['neg']}, 'from_name': 'sent', 'to_name': 'text', 'type': 'choices'}
-        ]
+        new_result = [{'value': {'choices': ['neg']}, 'from_name': 'sent', 'to_name': 'text', 'type': 'choices'}]
         resp = self.client.patch(
             f'/api/annotations/{annotation.id}/',
             data={'result': new_result},
@@ -204,9 +199,7 @@ class ResetOnEditTests(APITestCase):
         self.assertIsNone(annotation.last_created_by_id)
 
     def test_no_reset_when_result_unchanged(self):
-        original_result = [
-            {'value': {'choices': ['pos']}, 'from_name': 'sent', 'to_name': 'text', 'type': 'choices'}
-        ]
+        original_result = [{'value': {'choices': ['pos']}, 'from_name': 'sent', 'to_name': 'text', 'type': 'choices'}]
         annotation = AnnotationFactory(
             task=self.task,
             completed_by=self.labeler,

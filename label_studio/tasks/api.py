@@ -466,9 +466,7 @@ class AnnotationAPI(generics.RetrieveUpdateDestroyAPIView):
         if not can_review(request.user):
             has_review_fields = review_fields & set(request.data.keys())
             if has_review_fields:
-                raise PermissionDenied(
-                    'You are not authorized to set review fields (last_action, last_created_by).'
-                )
+                raise PermissionDenied('You are not authorized to set review fields (last_action, last_created_by).')
 
         # Reset approval when the annotation result changes
         incoming_result = request.data.get('result')
