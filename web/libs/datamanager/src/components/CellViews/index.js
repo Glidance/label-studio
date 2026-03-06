@@ -19,6 +19,7 @@ export { StringCell as Text } from "./StringCell";
 export { VideoCell as Video } from "./VideoCell";
 export { ProjectCell as Project } from "./ProjectCell";
 export { TaskState } from "./TaskState";
+export { ReviewStatus } from "./ReviewStatusCell";
 
 export function normalizeCellAlias(alias) {
   // remove trailing separators to make `toStudlyCaps` safe

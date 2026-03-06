@@ -719,6 +719,17 @@ def file_upload(queryset):
     return queryset.annotate(file_upload_field=F('file_upload__file'))
 
 
+def annotate_review_status(queryset):
+    return queryset.annotate(
+        review_status=Case(
+            When(annotations__last_action='rejected', then=Value('rejected')),
+            When(annotations__last_action__in=['accepted', 'fixed_and_accepted'], then=Value('accepted')),
+            default=Value(''),
+            output_field=models.CharField(),
+        )
+    )
+
+
 def dummy(queryset):
     return queryset
 
@@ -759,6 +770,7 @@ settings.DATA_MANAGER_ANNOTATIONS_MAP = {
     'draft_exists': annotate_draft_exists,
     'storage_filename': annotate_storage_filename,
     'state': annotate_state,
+    'review_status': annotate_review_status,
 }
 
 

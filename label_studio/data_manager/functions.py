@@ -269,6 +269,15 @@ def get_all_columns(project, *_):
             'visibility_defaults': {'explore': False, 'labeling': False},
             'project_defined': False,
         },
+        {
+            'id': 'review_status',
+            'title': 'Review',
+            'type': 'String',
+            'target': 'tasks',
+            'help': 'Annotation approval status',
+            'visibility_defaults': {'explore': True, 'labeling': False},
+            'project_defined': False,
+        },
     ]
 
     result['columns'].append(data_root)
