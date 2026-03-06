@@ -1,5 +1,6 @@
 """This file and its contents are licensed under the Apache License 2.0. Please see the included NOTICE for copyright information and LICENSE for a copy of the license."""
 
+import json
 import logging
 
 from core.mixins import GetParentObjectMixin
@@ -19,9 +20,10 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
 from projects.functions.stream_history import fill_history_annotation
 from projects.models import Project
-from rest_framework import generics, viewsets
+from rest_framework import generics, status, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from tasks.models import Annotation, AnnotationDraft, Prediction, Task
 from tasks.openapi_schema import (
@@ -454,8 +456,32 @@ class AnnotationAPI(generics.RetrieveUpdateDestroyAPIView):
         annotation.delete()
 
     def update(self, request, *args, **kwargs):
+        from tasks.review import can_review
+
         # save user history with annotator_id, time & annotation result
         annotation = self.get_object()
+
+        # Tampering protection: non-reviewers cannot set review fields
+        review_fields = {'last_action', 'last_created_by'}
+        if not can_review(request.user):
+            has_review_fields = review_fields & set(request.data.keys())
+            if has_review_fields:
+                raise PermissionDenied(
+                    'You are not authorized to set review fields (last_action, last_created_by).'
+                )
+
+        # Reset approval when the annotation result changes
+        incoming_result = request.data.get('result')
+        if incoming_result is not None and annotation.last_action in ('accepted', 'rejected'):
+            old_result = json.dumps(annotation.result, sort_keys=True)
+            new_result = json.dumps(incoming_result, sort_keys=True)
+            if old_result != new_result:
+                Annotation.objects.filter(id=annotation.id).update(
+                    last_action=None,
+                    last_created_by=None,
+                )
+                annotation.refresh_from_db(fields=['last_action', 'last_created_by'])
+
         # use updated instead of save to avoid duplicated signals
         Annotation.objects.filter(id=annotation.id).update(updated_by=request.user)
 
@@ -907,3 +933,68 @@ class AnnotationConvertAPI(generics.RetrieveAPIView):
         emit_webhooks_for_instance(organization, project, WebhookAction.ANNOTATIONS_DELETED, [pk])
         data = AnnotationDraftSerializer(instance=draft).data
         return Response(status=201, data=data)
+
+
+class AnnotationReviewBaseAPI(generics.GenericAPIView):
+    """Base class for annotation approve/reject endpoints."""
+
+    permission_classes = (IsAuthenticated,)
+    queryset = Annotation.objects.all()
+    serializer_class = AnnotationSerializer
+
+    review_action = None  # set in subclass
+
+    def post(self, request, *args, **kwargs):
+        from tasks.review import can_review, is_review_enabled
+
+        if not is_review_enabled():
+            return Response(
+                {'detail': 'Review feature is not enabled.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not can_review(request.user):
+            return Response(
+                {'detail': 'You are not authorized to approve or reject annotations.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        annotation = self.get_object()
+        annotation.last_action = self.review_action
+        annotation.last_created_by = request.user
+        annotation.save(update_fields=['last_action', 'last_created_by', 'updated_at'])
+
+        serializer = self.get_serializer(annotation)
+        return Response(serializer.data)
+
+
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Annotations'],
+        summary='Approve annotation',
+        description='Approve an annotation. Only available to allowlisted reviewers when the review feature is enabled.',
+        responses={200: AnnotationSerializer},
+        extensions={
+            'x-fern-audiences': ['internal'],
+        },
+    ),
+)
+class AnnotationApproveAPI(AnnotationReviewBaseAPI):
+    review_action = 'accepted'
+
+
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Annotations'],
+        summary='Reject annotation',
+        description='Reject an annotation. Only available to allowlisted reviewers when the review feature is enabled.',
+        responses={200: AnnotationSerializer},
+        extensions={
+            'x-fern-audiences': ['internal'],
+        },
+    ),
+)
+class AnnotationRejectAPI(AnnotationReviewBaseAPI):
+    review_action = 'rejected'

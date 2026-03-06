@@ -91,6 +91,18 @@ export const APIConfig = {
       method: "delete",
     },
 
+    /** Approve annotation (review) */
+    approveAnnotation: {
+      path: "/../annotations/:annotationID/approve",
+      method: "post",
+    },
+
+    /** Reject annotation (review) */
+    rejectAnnotation: {
+      path: "/../annotations/:annotationID/reject",
+      method: "post",
+    },
+
     /** Task drafts */
     taskDrafts: "/../tasks/:taskID/drafts",
 

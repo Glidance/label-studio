@@ -140,6 +140,7 @@ class AnnotationSerializer(FlexFieldsModelSerializer):
     created_ago = serializers.CharField(default='', read_only=True, help_text='Time delta from creation time')
     completed_by = serializers.PrimaryKeyRelatedField(required=False, queryset=User.objects.all())
     unique_id = serializers.CharField(required=False, write_only=True)
+    review_status = serializers.SerializerMethodField(read_only=True, help_text='Review status with reviewer info')
 
     def create(self, *args, **kwargs):
         try:
@@ -167,6 +168,16 @@ class AnnotationSerializer(FlexFieldsModelSerializer):
             raise ValidationError('annotation "result" field in annotation must be list')
 
         return data
+
+    def get_review_status(self, annotation) -> dict | None:
+        if annotation.last_action not in ('accepted', 'rejected'):
+            return None
+        reviewer = annotation.last_created_by
+        return {
+            'action': annotation.last_action,
+            'reviewer_id': reviewer.id if reviewer else None,
+            'reviewer_email': reviewer.email if reviewer else None,
+        }
 
     def get_created_username(self, annotation) -> str:
         user = annotation.completed_by

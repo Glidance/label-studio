@@ -173,6 +173,10 @@
       {% endif %}
       {% block app_user_extra %}{% endblock %}
     },
+    review: {
+      enabled: {{settings.REVIEW_ENABLED|yesno:"true,false"}},
+      can_review: {% if review_can_review %}true{% else %}false{% endif %},
+    },
     lookupHotkey: lookupHotkey,
     debug: {{settings.DEBUG|yesno:"true,false"}},
     polling: {% if feature_flags.fflag_dev_disable_polling_killswitch_short %}false{% else %}true{% endif %},

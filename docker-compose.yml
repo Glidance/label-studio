@@ -44,6 +44,9 @@ services:
       - LABEL_STUDIO_HOST=${LABEL_STUDIO_HOST:-}
       - JSON_LOG=1
     #      - LOG_LEVEL=DEBUG
+    # Annotation Review / Approval (set to true + comma-separated emails to enable)
+    #      - LABEL_STUDIO_REVIEW_ENABLED=false
+    #      - LABEL_STUDIO_REVIEW_APPROVERS=reviewer1@company.com,reviewer2@company.com
     volumes:
       - ./mydata:/label-studio/data:rw
     command: label-studio-uwsgi

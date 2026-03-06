@@ -141,6 +141,11 @@ const _Annotation = types
     comment_count: types.maybeNull(types.integer),
     unresolved_comment_count: types.maybeNull(types.integer),
 
+    // Review/approval state
+    last_action: types.maybeNull(types.string),
+    last_created_by: types.maybeNull(types.frozen()),
+    review_status: types.maybeNull(types.frozen()),
+
     loadedDate: types.optional(types.Date, () => new Date()),
     leadTime: types.maybeNull(types.number),
 

@@ -103,12 +103,21 @@ class BaseUserSerializerUpdate(BaseUserSerializer):
 
 class BaseWhoAmIUserSerializer(BaseUserSerializer):
     permissions = serializers.SerializerMethodField()
+    review = serializers.SerializerMethodField()
 
     class Meta(BaseUserSerializer.Meta):
-        fields = BaseUserSerializer.Meta.fields + ('permissions',)
+        fields = BaseUserSerializer.Meta.fields + ('permissions', 'review')
 
     def get_permissions(self, user) -> list[str]:
         return [perm for _, perm in all_permissions]
+
+    def get_review(self, user) -> dict:
+        from tasks.review import can_review, is_review_enabled
+
+        return {
+            'enabled': is_review_enabled(),
+            'can_review': can_review(user),
+        }
 
 
 class UserSimpleSerializer(BaseUserSerializer):

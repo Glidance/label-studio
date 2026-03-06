@@ -95,6 +95,10 @@ export const API_CONFIG = {
 
     // FSM
     fsmStateHistory: "GET:/fsm/entities/:entityType/:entityId/history",
+
+    // Annotation Review
+    approveAnnotation: "POST:/annotations/:annotationID/approve",
+    rejectAnnotation: "POST:/annotations/:annotationID/reject",
   },
   alwaysExpectJSON: false,
 };

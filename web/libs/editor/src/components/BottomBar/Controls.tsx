@@ -151,6 +151,49 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       return <div className={cn("controls").toClassName()}>{buttons}</div>;
     }
 
+    // Review status badge
+    if (isReview && annotation.pk) {
+      const reviewStatus = (annotation as any).review_status;
+      const lastAction = (annotation as any).last_action;
+      const reviewerEmail = reviewStatus?.reviewer_email || "";
+
+      let badgeLabel = "Unreviewed";
+      let badgeColor = "#9e9e9e"; // neutral gray
+      let badgeTooltip = "This annotation has not been reviewed";
+
+      if (lastAction === "accepted") {
+        badgeLabel = "Approved";
+        badgeColor = "#4caf50"; // green
+        badgeTooltip = reviewerEmail ? `Approved by ${reviewerEmail}` : "Approved";
+      } else if (lastAction === "rejected") {
+        badgeLabel = "Rejected";
+        badgeColor = "#f44336"; // red
+        badgeTooltip = reviewerEmail ? `Rejected by ${reviewerEmail}` : "Rejected";
+      }
+
+      buttons.push(
+        <ButtonTooltip key="review-badge" title={badgeTooltip}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "4px 12px",
+              borderRadius: "4px",
+              fontSize: "13px",
+              fontWeight: 600,
+              color: badgeColor,
+              border: `1px solid ${badgeColor}`,
+              marginRight: "8px",
+              userSelect: "none",
+            }}
+            data-testid="review-status-badge"
+          >
+            {badgeLabel}
+          </span>
+        </ButtonTooltip>,
+      );
+    }
+
     if (isReview) {
       const customRejectButtons = toArray(customButtons.get("reject"));
       const hasCustomReject = customRejectButtons.length > 0;

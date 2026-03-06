@@ -158,6 +158,11 @@ export class LSFWrapper {
       interfaces.push("comments:reject");
     }
 
+    // Annotation review: show approve/reject buttons for allowlisted reviewers
+    if (window.APP_SETTINGS?.review?.enabled && window.APP_SETTINGS?.review?.can_review) {
+      interfaces.push("review");
+    }
+
     if (this.interfacesModifier) {
       interfaces = this.interfacesModifier(interfaces, this.labelStream);
     }
@@ -204,6 +209,8 @@ export class LSFWrapper {
       onEntityCreate: this.onEntityCreate,
       onEntityDelete: this.onEntityDelete,
       onSelectAnnotation: this.onSelectAnnotation,
+      onAcceptAnnotation: this.onAcceptAnnotation,
+      onRejectAnnotation: this.onRejectAnnotation,
       onNextTask: this.onNextTask,
       onPrevTask: this.onPrevTask,
 
@@ -731,6 +738,72 @@ export class LSFWrapper {
       const annotationID = lastAnnotation.pk ?? undefined;
 
       this.setAnnotation(annotationID);
+    }
+  };
+
+  /** @private */
+  onAcceptAnnotation = async (ls, { isDirty, entity }) => {
+    // If there are unsaved changes, save the annotation first then approve
+    if (isDirty) {
+      await this.onUpdateAnnotation(ls, entity);
+    }
+
+    const result = await this.withinLoadingState(async () => {
+      return this.datamanager.apiCall(
+        "approveAnnotation",
+        { annotationID: entity.pk },
+        {},
+        { errorHandler: () => {} },
+      );
+    });
+
+    const statusCode = result?.$meta?.status;
+
+    if (statusCode >= 400) {
+      this.datamanager.invoke("toast", {
+        message: result?.detail || "You are not authorized to approve annotations.",
+        type: "error",
+      });
+    } else {
+      this.datamanager.invoke("toast", {
+        message: "Annotation approved successfully",
+        type: "info",
+      });
+      // Reload the task to reflect updated annotation state
+      await this.loadTask(this.task.id, entity.pk, true);
+    }
+  };
+
+  /** @private */
+  onRejectAnnotation = async (ls, { isDirty, entity, comment }) => {
+    // If there are unsaved changes, save the annotation first then reject
+    if (isDirty) {
+      await this.onUpdateAnnotation(ls, entity);
+    }
+
+    const result = await this.withinLoadingState(async () => {
+      return this.datamanager.apiCall(
+        "rejectAnnotation",
+        { annotationID: entity.pk },
+        {},
+        { errorHandler: () => {} },
+      );
+    });
+
+    const statusCode = result?.$meta?.status;
+
+    if (statusCode >= 400) {
+      this.datamanager.invoke("toast", {
+        message: result?.detail || "You are not authorized to reject annotations.",
+        type: "error",
+      });
+    } else {
+      this.datamanager.invoke("toast", {
+        message: "Annotation rejected",
+        type: "info",
+      });
+      // Reload the task to reflect updated annotation state
+      await this.loadTask(this.task.id, entity.pk, true);
     }
   };
 

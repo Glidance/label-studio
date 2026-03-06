@@ -32,4 +32,15 @@ def settings(request):
     if hasattr(request, 'user'):
         feature_flags = all_flags(request.user)
 
-    return {'settings': django_settings, 'versions': versions, 'feature_flags': feature_flags}
+    review_can_review = False
+    if hasattr(request, 'user') and request.user.is_authenticated:
+        from tasks.review import can_review
+
+        review_can_review = can_review(request.user)
+
+    return {
+        'settings': django_settings,
+        'versions': versions,
+        'feature_flags': feature_flags,
+        'review_can_review': review_can_review,
+    }
