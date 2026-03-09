@@ -68,36 +68,12 @@ const ControlButton = observer(({ button, disabled, onClick, variant, look }: Co
 
 export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
   observer(({ store, history, annotation }) => {
-    if (!annotation) return <></>;
-
-    const isReview = store.hasInterface("review") || annotation.canBeReviewed;
-
-    // Hide Submit when a reviewer is reviewing someone else's work —
-    // the ✓/✗ ReviewButtons handle save + review status + advance.
-    const reviewSettings = (window as any).APP_SETTINGS?.review;
-    const isReviewerOnOthersWork =
-      reviewSettings?.can_review &&
-      annotation.user?.email &&
-      (window as any).APP_SETTINGS?.user?.email !== annotation.user?.email;
-
-    if (isReviewerOnOthersWork) return <></>;
-
-    const isNotQuickView = store.hasInterface("topbar:prevnext");
-    const historySelected = isDefined(store.annotationStore.selectedHistory);
-    const { userGenerate, sentUserGenerate, versions, results, editable: annotationEditable } = annotation;
-    const dropdownTrigger = cn("dropdown").elem("trigger").toClassName();
-    const customButtons: CustomButtonsField = store.customButtons;
-    const buttons: React.ReactNode[] = [];
-
+    // Hooks must be called unconditionally (React rules of hooks)
     const [isInProgress, setIsInProgress] = useState(false);
-    const disabled = !annotationEditable || store.isSubmitting || historySelected || isInProgress;
-    const submitDisabled = store.hasInterface("annotations:deny-empty") && results.length === 0;
-
-    /** Check all things related to comments and then call the action if all is good */
     const handleActionWithComments = useCallback(
       async (e: React.MouseEvent, callback: () => any, errorMessage: string) => {
         const { addedCommentThisSession, currentComment, commentFormSubmit } = store.commentStore;
-        const comment = currentComment[annotation.id];
+        const comment = currentComment[annotation?.id];
         // accept both old and new comment formats
         const commentText = (comment?.text ?? comment)?.trim();
 
@@ -129,7 +105,32 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       ],
     );
 
+    // Early returns — safe now that all hooks have been called
+    if (!annotation) return <></>;
+
+    const isReview = store.hasInterface("review") || annotation.canBeReviewed;
+
+    // Hide Submit when a reviewer is reviewing someone else's work —
+    // the ✓/✗ ReviewButtons handle save + review status + advance.
+    const reviewSettings = (window as any).APP_SETTINGS?.review;
+    const isReviewerOnOthersWork =
+      reviewSettings?.can_review &&
+      annotation.user?.email &&
+      (window as any).APP_SETTINGS?.user?.email !== annotation.user?.email;
+
+    if (isReviewerOnOthersWork) return <></>;
+
     if (annotation.isNonEditableDraft) return <></>;
+
+    const isNotQuickView = store.hasInterface("topbar:prevnext");
+    const historySelected = isDefined(store.annotationStore.selectedHistory);
+    const { userGenerate, sentUserGenerate, versions, results, editable: annotationEditable } = annotation;
+    const dropdownTrigger = cn("dropdown").elem("trigger").toClassName();
+    const customButtons: CustomButtonsField = store.customButtons;
+    const buttons: React.ReactNode[] = [];
+
+    const disabled = !annotationEditable || store.isSubmitting || historySelected || isInProgress;
+    const submitDisabled = store.hasInterface("annotations:deny-empty") && results.length === 0;
 
     const buttonsBefore = customButtons.get("_before");
     const buttonsReplacement = customButtons.get("_replace");
