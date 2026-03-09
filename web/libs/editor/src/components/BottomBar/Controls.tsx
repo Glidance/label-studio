@@ -162,7 +162,7 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       return <div className={cn("controls").toClassName()}>{buttons}</div>;
     }
 
-    if (isReview) {
+    if (isReview && !reviewSettings?.enabled) {
       const customRejectButtons = toArray(customButtons.get("reject"));
       const hasCustomReject = customRejectButtons.length > 0;
       const originalRejectButton = RejectButtonDefinition;
