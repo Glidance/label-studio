@@ -69,6 +69,17 @@ const ControlButton = observer(({ button, disabled, onClick, variant, look }: Co
 export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
   observer(({ store, history, annotation }) => {
     const isReview = store.hasInterface("review") || annotation.canBeReviewed;
+
+    // Hide Submit when a reviewer is reviewing someone else's work —
+    // the ✓/✗ ReviewButtons handle save + review status + advance.
+    const reviewSettings = (window as any).APP_SETTINGS?.review;
+    const isReviewerOnOthersWork =
+      reviewSettings?.can_review &&
+      annotation.user?.email &&
+      (window as any).APP_SETTINGS?.user?.email !== annotation.user?.email;
+
+    if (isReviewerOnOthersWork) return <></>;
+
     const isNotQuickView = store.hasInterface("topbar:prevnext");
     const historySelected = isDefined(store.annotationStore.selectedHistory);
     const { userGenerate, sentUserGenerate, versions, results, editable: annotationEditable } = annotation;

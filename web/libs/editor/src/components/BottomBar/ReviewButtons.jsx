@@ -16,6 +16,12 @@ export const ReviewButtons = observer(({ store }) => {
 
   if (!annotation?.pk) return null;
 
+  // Prevent self-review: hide ✓/✗ buttons when viewing own annotation
+  const currentUserEmail = window.APP_SETTINGS?.user?.email;
+  const annotationAuthorEmail = annotation?.user?.email;
+  const isOwnAnnotation = currentUserEmail && annotationAuthorEmail &&
+    currentUserEmail.toLowerCase() === annotationAuthorEmail.toLowerCase();
+
   const lastAction = annotation.last_action;
   const disabled = !annotation.editable || store.isSubmitting;
   const reviewInfo = annotation.review_status;
@@ -73,7 +79,7 @@ export const ReviewButtons = observer(({ store }) => {
       >
         {badgeIcon}
       </span>
-      {canReview && (
+      {canReview && !isOwnAnnotation && (
         <>
           <button
             title="Reject annotation"
