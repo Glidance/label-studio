@@ -68,6 +68,8 @@ const ControlButton = observer(({ button, disabled, onClick, variant, look }: Co
 
 export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
   observer(({ store, history, annotation }) => {
+    if (!annotation) return <></>;
+
     const isReview = store.hasInterface("review") || annotation.canBeReviewed;
 
     // Hide Submit when a reviewer is reviewing someone else's work —
