@@ -151,51 +151,6 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       return <div className={cn("controls").toClassName()}>{buttons}</div>;
     }
 
-    // Review status badge
-    if (isReview && annotation.pk) {
-      const reviewStatus = (annotation as any).review_status;
-      const lastAction = (annotation as any).last_action;
-      const reviewerEmail = reviewStatus?.reviewer_email || "";
-
-      let badgeIcon = "○";
-      let badgeColor = "#9e9e9e";
-      let badgeTooltip = "Unreviewed";
-
-      if (lastAction === "accepted") {
-        badgeIcon = "✓";
-        badgeColor = "#4caf50";
-        badgeTooltip = reviewerEmail ? `Approved by ${reviewerEmail}` : "Approved";
-      } else if (lastAction === "rejected") {
-        badgeIcon = "✗";
-        badgeColor = "#f44336";
-        badgeTooltip = reviewerEmail ? `Rejected by ${reviewerEmail}` : "Rejected";
-      }
-
-      buttons.push(
-        <ButtonTooltip key="review-badge" title={badgeTooltip}>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "28px",
-              height: "28px",
-              borderRadius: "4px",
-              fontSize: "18px",
-              fontWeight: 700,
-              color: badgeColor,
-              border: `2px solid ${badgeColor}`,
-              userSelect: "none",
-              lineHeight: 1,
-            }}
-            data-testid="review-status-badge"
-          >
-            {badgeIcon}
-          </span>
-        </ButtonTooltip>,
-      );
-    }
-
     if (isReview) {
       const customRejectButtons = toArray(customButtons.get("reject"));
       const hasCustomReject = customRejectButtons.length > 0;
@@ -221,71 +176,9 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
           }
         };
 
-        buttons.push(
-          <button
-            key={button.name}
-            title="Reject annotation: [ Ctrl+Space ]"
-            aria-label="reject-annotation"
-            disabled={disabled}
-            onClick={onReject}
-            data-testid="bottombar-reject-button"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "40px",
-              height: "40px",
-              padding: "0",
-              border: "2px solid #f44336",
-              borderRadius: "4px",
-              backgroundColor: "transparent",
-              color: "#f44336",
-              fontSize: "22px",
-              fontWeight: 700,
-              cursor: disabled ? "not-allowed" : "pointer",
-              opacity: disabled ? 0.4 : 1,
-              lineHeight: 1,
-            }}
-          >
-            ✗
-          </button>,
-        );
+        buttons.push(<ControlButton key={button.name} button={button} disabled={disabled} onClick={onReject} />);
       });
-      buttons.push(
-        <button
-          key="review-accept"
-          title="Accept annotation: [ Ctrl+Enter ]"
-          aria-label="accept-annotation"
-          disabled={disabled}
-          onClick={async () => {
-            const selected = store.annotationStore.selected;
-
-            selected?.submissionInProgress();
-            await store.commentStore.commentFormSubmit();
-            store.acceptAnnotation();
-          }}
-          data-testid="bottombar-accept-button"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "40px",
-            height: "40px",
-            padding: "0",
-            border: "2px solid #4caf50",
-            borderRadius: "4px",
-            backgroundColor: "#4caf50",
-            color: "#fff",
-            fontSize: "22px",
-            fontWeight: 700,
-            cursor: disabled ? "not-allowed" : "pointer",
-            opacity: disabled ? 0.4 : 1,
-            lineHeight: 1,
-          }}
-        >
-          ✓
-        </button>,
-      );
+      buttons.push(<AcceptButton key="review-accept" disabled={disabled} history={history} store={store} />);
     } else if (annotation.skipped) {
       buttons.push(
         <div className={cn("controls").elem("skipped-info").toClassName()} key="skipped">

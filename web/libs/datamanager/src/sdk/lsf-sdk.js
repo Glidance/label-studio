@@ -158,11 +158,6 @@ export class LSFWrapper {
       interfaces.push("comments:reject");
     }
 
-    // Annotation review: show approve/reject buttons for allowlisted reviewers
-    if (window.APP_SETTINGS?.review?.enabled && window.APP_SETTINGS?.review?.can_review) {
-      interfaces.push("review");
-    }
-
     if (this.interfacesModifier) {
       interfaces = this.interfacesModifier(interfaces, this.labelStream);
     }
@@ -769,8 +764,12 @@ export class LSFWrapper {
         message: "Annotation approved successfully",
         type: "info",
       });
-      // Reload the task to reflect updated annotation state
-      await this.loadTask(this.task.id, entity.pk, true);
+      // Auto-advance in label stream, otherwise reload current task
+      if (this.shouldLoadNext()) {
+        await this.loadNextTask();
+      } else {
+        await this.loadTask(this.task.id, entity.pk, true);
+      }
     }
   };
 
@@ -802,8 +801,12 @@ export class LSFWrapper {
         message: "Annotation rejected",
         type: "info",
       });
-      // Reload the task to reflect updated annotation state
-      await this.loadTask(this.task.id, entity.pk, true);
+      // Auto-advance in label stream, otherwise reload current task
+      if (this.shouldLoadNext()) {
+        await this.loadNextTask();
+      } else {
+        await this.loadTask(this.task.id, entity.pk, true);
+      }
     }
   };
 

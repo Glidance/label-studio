@@ -7,6 +7,7 @@ import { AutoAcceptToggle } from "../AnnotationTab/AutoAcceptToggle";
 import { DynamicPreannotationsToggle } from "../AnnotationTab/DynamicPreannotationsToggle";
 import { GroundTruth } from "../CurrentEntity/GroundTruth";
 import { EditingHistory } from "./HistoryActions";
+import { ReviewButtons } from "./ReviewButtons";
 import "./Actions.scss";
 
 export const Actions = ({ store }) => {
@@ -50,6 +51,8 @@ export const Actions = ({ store }) => {
       </div>
 
       {store.hasInterface("ground-truth") && !isBulkMode && <GroundTruth entity={entity} />}
+
+      <ReviewButtons store={store} />
 
       {!isViewAll && (
         <div className={cn("model-actions").toClassName()}>
