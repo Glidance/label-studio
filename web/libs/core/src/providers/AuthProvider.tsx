@@ -14,11 +14,15 @@ export enum ABILITY {
   can_delete_projects = "projects.delete",
   can_reset_project_cache = "projects.reset_cache",
   can_reset_dm_views = "views.reset",
+  can_export_data = "projects.export",
 
   // Cloud Storage
   can_view_storage = "storages.view",
   can_manage_storage = "storages.change",
   can_sync_storage = "storages.sync",
+
+  // Organization
+  can_access_organization = "organization.view",
 }
 
 export type Ability = ABILITY;
