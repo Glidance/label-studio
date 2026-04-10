@@ -70,6 +70,7 @@ describe("RESTRICTED_FOR_NON_GLIDANCE", () => {
       new Set<string>([
         ABILITY.can_create_tokens,
         ABILITY.can_export_data,
+        ABILITY.can_access_danger_zone,
         ABILITY.can_access_organization,
         ABILITY.can_view_storage,
         ABILITY.can_manage_storage,

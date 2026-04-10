@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { useHistory } from "react-router";
+import { Redirect, useHistory } from "react-router-dom";
 import { Button, Typography, useToast } from "@humansignal/ui";
+import { ABILITY, useAuth } from "@humansignal/core/providers/AuthProvider";
 import { useUpdatePageTitle, createTitleFromSegments } from "@humansignal/core";
 import { Label } from "../../components/Form";
 import { modal } from "../../components/Modal/Modal";
@@ -17,6 +18,7 @@ export const DangerZone = () => {
   const api = useAPI();
   const history = useHistory();
   const toast = useToast();
+  const { permissions, isLoading: authLoading } = useAuth();
   const [processing, setProcessing] = useState(null);
 
   useUpdatePageTitle(createTitleFromSegments([project?.title, "Danger Zone"]));
@@ -195,6 +197,13 @@ export const DangerZone = () => {
     ],
     [project],
   );
+
+  // Guard: non-glidance users cannot view the Danger Zone. Placed AFTER all
+  // hooks to preserve Rules of Hooks.
+  if (authLoading) return null;
+  if (!permissions.can(ABILITY.can_access_danger_zone)) {
+    return <Redirect to={`/projects/${project?.id}/settings`} />;
+  }
 
   return (
     <div className={cn("simple-settings")}>

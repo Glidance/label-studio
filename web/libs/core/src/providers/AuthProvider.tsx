@@ -16,6 +16,7 @@ export enum ABILITY {
   can_reset_project_cache = "projects.reset_cache",
   can_reset_dm_views = "views.reset",
   can_export_data = "projects.export",
+  can_access_danger_zone = "projects.danger_zone",
 
   // Cloud Storage
   can_view_storage = "storages.view",

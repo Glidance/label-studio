@@ -13,6 +13,7 @@ import "./settings.scss";
 export const MenuLayout = ({ children, ...routeProps }) => {
   const { permissions } = useAuth();
   const canViewStorage = permissions.can(ABILITY.can_view_storage);
+  const canAccessDangerZone = permissions.can(ABILITY.can_access_danger_zone);
 
   return (
     <SidebarMenu
@@ -24,7 +25,7 @@ export const MenuLayout = ({ children, ...routeProps }) => {
         PredictionsSettings,
         canViewStorage && StorageSettings,
         WebhookPage,
-        DangerZone,
+        canAccessDangerZone && DangerZone,
       ].filter(Boolean)}
       path={routeProps.match.url}
       children={children}

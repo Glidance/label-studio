@@ -33,10 +33,11 @@ export const isGlidanceUser = (user: APIUser | null | undefined): boolean =>
  * backend-provided list instead).
  */
 export const RESTRICTED_FOR_NON_GLIDANCE: readonly string[] = [
-  "users.token.any",    // ABILITY.can_create_tokens
-  "projects.export",    // ABILITY.can_export_data
-  "organization.view",  // ABILITY.can_access_organization
-  "storages.view",      // ABILITY.can_view_storage
-  "storages.change",    // ABILITY.can_manage_storage
-  "storages.sync",      // ABILITY.can_sync_storage
+  "users.token.any",     // ABILITY.can_create_tokens
+  "projects.export",     // ABILITY.can_export_data
+  "projects.danger_zone",// ABILITY.can_access_danger_zone
+  "organization.view",   // ABILITY.can_access_organization
+  "storages.view",       // ABILITY.can_view_storage
+  "storages.change",     // ABILITY.can_manage_storage
+  "storages.sync",       // ABILITY.can_sync_storage
 ];
