@@ -17,7 +17,7 @@ import { LSLogo } from "../../assets/images";
 import { Button, Userpic, ThemeToggle } from "@humansignal/ui";
 import { useConfig } from "../../providers/ConfigProvider";
 import { useContextComponent, useFixedLocation } from "../../providers/RoutesProvider";
-import { useAuth } from "@humansignal/core/providers/AuthProvider";
+import { ABILITY, useAuth } from "@humansignal/core/providers/AuthProvider";
 import { cn } from "../../utils/bem";
 import { absoluteURL, isDefined } from "../../utils/helpers";
 import { Breadcrumbs } from "../Breadcrumbs/Breadcrumbs";
@@ -57,7 +57,7 @@ const RightContextMenu = ({ className, ...props }) => {
 export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSidebarToggle, onSidebarPin }) => {
   const menuDropdownRef = useRef();
   const useMenuRef = useRef();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, permissions } = useAuth();
   const location = useFixedLocation();
 
   const config = useConfig();
@@ -222,7 +222,9 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
               <Menu>
                 {isFF(FF_HOMEPAGE) && <Menu.Item label="Home" to="/" icon={<IconHome />} data-external exact />}
                 <Menu.Item label="Projects" to="/projects" icon={<IconFolder />} data-external exact />
-                <Menu.Item label="Organization" to="/organization" icon={<IconPeople />} data-external exact />
+                {permissions.can(ABILITY.can_access_organization) && (
+                  <Menu.Item label="Organization" to="/organization" icon={<IconPeople />} data-external exact />
+                )}
 
                 <Menu.Spacer />
 
