@@ -1,5 +1,6 @@
 import { createContext, memo, useCallback, useContext, useMemo } from "react";
 import type { APIUser } from "../types/user";
+import { isGlidanceUser, RESTRICTED_FOR_NON_GLIDANCE } from "../lib/utils/account-restrictions";
 import { useAtomValue } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 import { currentUserAtom, currentUserUpdateAtom } from "../atoms/user";
@@ -43,18 +44,37 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-const makePermissionChecker = (list?: (Ability | string)[]) => {
+/**
+ * Exported for unit testing. Builds a permission checker that combines:
+ * 1. A backend-provided ability list (with support for "*" wildcard and
+ *    "-ability" explicit deny).
+ * 2. A client-side overlay: non-@glidance.io users are force-denied any
+ *    ability in RESTRICTED_FOR_NON_GLIDANCE regardless of what the backend
+ *    granted. See web/libs/core/src/lib/utils/account-restrictions.ts and
+ *    docs/superpowers/specs/2026-04-10-glidance-account-restrictions-design.md.
+ */
+export const makePermissionChecker = (
+  list: (Ability | string)[] | undefined,
+  user: APIUser | null,
+) => {
   const abilities = new Set<string>((list as string[]) ?? []);
+  const restrictedSet = new Set<string>(RESTRICTED_FOR_NON_GLIDANCE);
+  const glidance = isGlidanceUser(user);
+
   const has = (a: string) => {
+    // Client-side overlay: non-glidance users are denied restricted abilities
+    // before we even consult the backend list.
+    if (!glidance && restrictedSet.has(a)) return false;
     if (abilities.size === 0) return false;
     if (abilities.has(`-${a}`)) return false;
     if (abilities.has("*")) return true;
     return abilities.has(a);
   };
+
   return {
     can: (a: string) => has(a),
-    canAny: (arr: string[]) => arr.some((a) => !abilities.has(`-${a}`) && (abilities.has("*") || abilities.has(a))),
-    canAll: (arr: string[]) => arr.every((a) => !abilities.has(`-${a}`) && (abilities.has("*") || abilities.has(a))),
+    canAny: (arr: string[]) => arr.some((a) => has(a)),
+    canAll: (arr: string[]) => arr.every((a) => has(a)),
   };
 };
 
@@ -81,7 +101,10 @@ export const AuthProvider = memo<{ children: React.ReactNode }>(({ children }) =
   );
 
   // Permissions
-  const checker = useMemo(() => makePermissionChecker(userQuery.data?.permissions), [userQuery.data?.permissions]);
+  const checker = useMemo(
+    () => makePermissionChecker(userQuery.data?.permissions, userQuery.data ?? null),
+    [userQuery.data],
+  );
   const permissionHelpers = useMemo<AuthPermissions>(() => {
     return {
       can: (a: string) => checker.can(String(a)),
