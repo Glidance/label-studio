@@ -13,8 +13,9 @@ import {
   Typography,
 } from "@humansignal/ui";
 import { useEffect, useRef } from "react";
-import { useHistory, useLocation } from "react-router-dom";
+import { Redirect, useHistory, useLocation } from "react-router-dom";
 import { useUpdatePageTitle, createTitleFromSegments } from "@humansignal/core";
+import { ABILITY, useAuth } from "@humansignal/core/providers/AuthProvider";
 import { useProject } from "../../../providers/ProjectProvider";
 import { cn } from "../../../utils/bem";
 import { StorageSet } from "./StorageSet";
@@ -53,6 +54,16 @@ export const StorageSettings = () => {
       history.replace(location.pathname);
     }
   }, [location, history, isLoaded]);
+
+  const { permissions, isLoading: authLoading } = useAuth();
+
+  // Guard: non-glidance users cannot view storage settings. Redirect to the
+  // project's general settings page. Placed AFTER all hooks to preserve
+  // Rules of Hooks.
+  if (authLoading) return null;
+  if (!permissions.can(ABILITY.can_view_storage)) {
+    return <Redirect to={`/projects/${project?.id}/settings`} />;
+  }
 
   return (
     <section className="max-w-[680px]">

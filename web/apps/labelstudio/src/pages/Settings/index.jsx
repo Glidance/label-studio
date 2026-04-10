@@ -1,3 +1,4 @@
+import { ABILITY, useAuth } from "@humansignal/core/providers/AuthProvider";
 import { SidebarMenu } from "../../components/SidebarMenu/SidebarMenu";
 import { WebhookPage } from "../WebhookPage/WebhookPage";
 import { DangerZone } from "./DangerZone";
@@ -10,6 +11,9 @@ import { StorageSettings } from "./StorageSettings/StorageSettings";
 import "./settings.scss";
 
 export const MenuLayout = ({ children, ...routeProps }) => {
+  const { permissions } = useAuth();
+  const canViewStorage = permissions.can(ABILITY.can_view_storage);
+
   return (
     <SidebarMenu
       menuItems={[
@@ -18,7 +22,7 @@ export const MenuLayout = ({ children, ...routeProps }) => {
         AnnotationSettings,
         MachineLearningSettings,
         PredictionsSettings,
-        StorageSettings,
+        canViewStorage && StorageSettings,
         WebhookPage,
         DangerZone,
       ].filter(Boolean)}
