@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useHistory } from "react-router";
+import { ABILITY, useAuth } from "@humansignal/core/providers/AuthProvider";
 import { Button } from "@humansignal/ui";
 import {
   IconWarningCircleFilled,
@@ -48,6 +49,14 @@ export const ExportPage = () => {
   const location = useFixedLocation();
   const pageParams = useParams();
   const api = useAPI();
+
+  const { permissions, isLoading: authLoading } = useAuth();
+
+  if (authLoading) return null;
+  if (!permissions.can(ABILITY.can_export_data)) {
+    history.replace("/projects");
+    return null;
+  }
 
   const [previousExports, setPreviousExports] = useState([]);
   const [downloading, setDownloading] = useState(false);
