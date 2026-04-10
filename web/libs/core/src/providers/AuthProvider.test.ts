@@ -70,6 +70,16 @@ describe("makePermissionChecker restriction overlay", () => {
     expect(checker.can(ABILITY.can_delete_projects)).toBe(true);
   });
 
+  it("overlay beats wildcard '*' for a non-glidance user", () => {
+    const checker = makePermissionChecker(["*"], makeUser("bob@example.com"));
+    // Restricted abilities: overlay denies them even though backend gave "*".
+    expect(checker.can(ABILITY.can_export_data)).toBe(false);
+    expect(checker.can(ABILITY.can_access_organization)).toBe(false);
+    expect(checker.can(ABILITY.can_create_tokens)).toBe(false);
+    // Non-restricted ability: wildcard still grants it.
+    expect(checker.can(ABILITY.can_delete_projects)).toBe(true);
+  });
+
   it("canAny and canAll correctly incorporate the overlay", () => {
     const checker = makePermissionChecker(ALL_PERMS, makeUser("bob@example.com"));
     expect(checker.canAny([ABILITY.can_export_data, ABILITY.can_delete_projects])).toBe(true);
