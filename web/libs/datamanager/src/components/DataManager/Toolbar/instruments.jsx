@@ -6,6 +6,7 @@ import { FieldsButton } from "../../Common/FieldsButton";
 import { FiltersPane } from "../../Common/FiltersPane";
 import { Icon } from "../../Common/Icon/Icon";
 import { Interface } from "../../Common/Interface";
+import { ABILITY, useAuth } from "@humansignal/core/providers/AuthProvider";
 import { ExportButton, ImportButton } from "../../Common/SDKButtons";
 import { Tooltip } from "@humansignal/ui";
 import { ActionsButton } from "./ActionsButton";
@@ -64,6 +65,16 @@ const ImportButtonWithChecks = ({ size }) => {
       </div>
     </Tooltip>
   );
+};
+
+/**
+ * Wraps the Data Manager export button with a permission check.
+ * Non-glidance users do not see the button at all.
+ */
+const ExportButtonWithGate = ({ size }) => {
+  const { permissions } = useAuth();
+  if (!permissions.can(ABILITY.can_export_data)) return null;
+  return <ExportButton size={size}>Export</ExportButton>;
 };
 
 export const instruments = {
@@ -125,7 +136,7 @@ export const instruments = {
   "export-button": ({ size }) => {
     return (
       <Interface name="export">
-        <ExportButton size={size}>Export</ExportButton>
+        <ExportButtonWithGate size={size} />
       </Interface>
     );
   },
