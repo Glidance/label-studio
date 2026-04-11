@@ -47,12 +47,21 @@ const AuthContext = createContext<AuthState | null>(null);
 
 /**
  * Exported for unit testing. Builds a permission checker that combines:
- * 1. A backend-provided ability list (with support for "*" wildcard and
- *    "-ability" explicit deny).
- * 2. A client-side overlay: non-@glidance.io users are force-denied any
- *    ability in RESTRICTED_FOR_NON_GLIDANCE regardless of what the backend
- *    granted. See web/libs/core/src/lib/utils/account-restrictions.ts and
- *    docs/superpowers/specs/2026-04-10-glidance-account-restrictions-design.md.
+ * 1. A client-side overlay: abilities in RESTRICTED_FOR_NON_GLIDANCE are
+ *    resolved entirely by this overlay — @glidance.io users are granted them
+ *    and all other users are denied them, regardless of the backend list.
+ *    This is necessary because some of the restricted ability keys (e.g.
+ *    "projects.export", "organization.view", "projects.danger_zone") are
+ *    frontend-only UI gates that do not exist in the backend's
+ *    `all_permissions` list, so the backend can neither grant nor deny them.
+ *    For keys that *do* exist in the backend list (e.g. "users.token.any",
+ *    "storages.*"), short-circuiting here is safe because Community Edition
+ *    always grants them to authenticated users, so the outcome is identical.
+ * 2. The backend-provided ability list for every other (non-restricted)
+ *    ability, with support for "*" wildcard and "-ability" explicit deny.
+ *
+ * See web/libs/core/src/lib/utils/account-restrictions.ts and
+ * docs/superpowers/specs/2026-04-10-glidance-account-restrictions-design.md.
  */
 export const makePermissionChecker = (
   list: (Ability | string)[] | undefined,
@@ -63,9 +72,12 @@ export const makePermissionChecker = (
   const glidance = isGlidanceUser(user);
 
   const has = (a: string) => {
-    // Client-side overlay: non-glidance users are denied restricted abilities
-    // before we even consult the backend list.
-    if (!glidance && restrictedSet.has(a)) return false;
+    // Abilities in the restriction list are handled entirely by this overlay.
+    // Glidance users get them; everyone else is denied. The backend ability
+    // list is not consulted for these keys.
+    if (restrictedSet.has(a)) return glidance;
+
+    // Everything else: fall through to the backend-provided ability list.
     if (abilities.size === 0) return false;
     if (abilities.has(`-${a}`)) return false;
     if (abilities.has("*")) return true;

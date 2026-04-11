@@ -86,4 +86,36 @@ describe("makePermissionChecker restriction overlay", () => {
     expect(checker.canAll([ABILITY.can_export_data, ABILITY.can_delete_projects])).toBe(false);
     expect(checker.canAny([ABILITY.can_export_data, ABILITY.can_create_tokens])).toBe(false);
   });
+
+  it("glidance user with empty backend abilities still gets restricted abilities", () => {
+    // Regression: the backend's all_permissions list does not include frontend-only
+    // ability keys like "projects.export", "organization.view", or
+    // "projects.danger_zone", so a glidance user must get them via the overlay
+    // short-circuit rather than via the backend list.
+    const checker = makePermissionChecker([], makeUser("alice@glidance.io"));
+    expect(checker.can(ABILITY.can_export_data)).toBe(true);
+    expect(checker.can(ABILITY.can_access_organization)).toBe(true);
+    expect(checker.can(ABILITY.can_access_danger_zone)).toBe(true);
+    expect(checker.can(ABILITY.can_create_tokens)).toBe(true);
+    expect(checker.can(ABILITY.can_view_storage)).toBe(true);
+    expect(checker.can(ABILITY.can_manage_storage)).toBe(true);
+    expect(checker.can(ABILITY.can_sync_storage)).toBe(true);
+    // Non-restricted abilities still require the backend list.
+    expect(checker.can(ABILITY.can_delete_projects)).toBe(false);
+  });
+
+  it("glidance user without invented ability in backend list still gets it", () => {
+    // Backend returned only the pre-existing subset that actually exists in
+    // label_studio/core/permissions.py. The frontend-only keys are missing,
+    // but the glidance user must still be granted them via the overlay.
+    const checker = makePermissionChecker(
+      [ABILITY.can_create_tokens, ABILITY.can_view_storage, ABILITY.can_delete_projects],
+      makeUser("alice@glidance.io"),
+    );
+    expect(checker.can(ABILITY.can_access_organization)).toBe(true);
+    expect(checker.can(ABILITY.can_export_data)).toBe(true);
+    expect(checker.can(ABILITY.can_access_danger_zone)).toBe(true);
+    // And non-restricted abilities from the backend list still work.
+    expect(checker.can(ABILITY.can_delete_projects)).toBe(true);
+  });
 });

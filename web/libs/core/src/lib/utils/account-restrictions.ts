@@ -16,7 +16,18 @@ export const isGlidanceUser = (user: APIUser | null | undefined): boolean =>
   isGlidanceEmail(user?.email ?? null);
 
 /**
- * Abilities that non-@glidance.io users are force-denied in the UI.
+ * Abilities that the client-side overlay in `AuthProvider.makePermissionChecker`
+ * governs. The overlay both GRANTS these to @glidance.io users and DENIES them
+ * to everyone else, without consulting the backend-provided ability list.
+ *
+ * This is intentional: some of these keys (e.g. "projects.export",
+ * "organization.view", "projects.danger_zone") are frontend-only UI gates
+ * and do not exist in the backend's `all_permissions` list in
+ * `label_studio/core/permissions.py`, so the backend can neither grant nor
+ * deny them. For the keys that do exist in the backend list (e.g.
+ * "users.token.any", "storages.*"), Community Edition always grants them to
+ * authenticated users, so the overlay short-circuit produces the same
+ * outcome as falling through to the backend list.
  *
  * Kept as bare string literals (NOT as `ABILITY.*` references) to avoid a
  * top-level circular import with `AuthProvider.tsx`, which depends on this
