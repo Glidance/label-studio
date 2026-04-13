@@ -55,7 +55,7 @@ jobs:
           if [[ "$branch" == "feat/polygon-preview-line" ]]; then
             image_version="glidance_v1"
           elif [[ "$branch" == "glidance" ]]; then
-            image_version="glidance_v2"
+            image_version="glidance_v3"
           else
             image_version="$(echo -n "${branch#refs/heads/}" | sed -E 's#[/_\.-]+#-#g' | tr '[:upper:]' '[:lower:]' | cut -c1-25)"
           fi
